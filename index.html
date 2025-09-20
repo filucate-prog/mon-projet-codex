@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Magic Pixel IA — Générateur Vidéo Avant/Après (v5 — MP4 ou Fallback WEBM)</title>
+  <style>
+    :root{ --bg:#0b1020; --panel:#111831; --muted:#9fb2c9; --text:#e6edf3; --accent:#fbbf24; --accent2:#38bdf8; --radius:18px; }
+    html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+    .card{background:var(--panel);border-radius:var(--radius);box-shadow:0 10px 30px rgba(0,0,0,.25);padding:18px}
+    h1{font-size:clamp(20px,2.8vw,30px);margin:0 0 8px}
+    .muted{color:var(--muted)}
+    .grid{display:grid;gap:14px}
+    @media(min-width:980px){.grid{grid-template-columns:1.2fr .8fr}}
+    .drop{border:2px dashed #274063;border-radius:16px;padding:14px;display:flex;gap:12px;align-items:center;justify-content:center;min-height:120px;cursor:pointer;background:#0e172b; position:relative}
+    .drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2}
+    .drop:hover{background:#0f1a33}
+    .thumbs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .thumb{background:#0c1222;border:1px solid #22344f;border-radius:14px;overflow:hidden;position:relative;aspect-ratio:1.6/1}
+    .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .pill{position:absolute;top:8px;left:8px;background:rgba(15,23,42,.85);border:1px solid #2b3f63;color:#fff;padding:4px 10px;border-radius:999px;font-size:12px}
+    .controls label{display:block;font-size:13px;margin:12px 0 4px;color:var(--muted)}
+    select, input[type="number"], input[type="text"]{width:100%;background:#0b1326;border:1px solid #1f3050;color:var(--text);border-radius:12px;padding:10px;outline:none}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    button{background:linear-gradient(180deg,#fbbf24,#f59e0b);color:#0b0b0b;border:0;border-radius:14px;padding:12px 16px;font-weight:700;cursor:pointer}
+    button.sec{background:#0b1326;color:#e6edf3;border:1px solid #1f3050}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .out{border:1px dashed #2a3f61;border-radius:16px;padding:12px;margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .badge{background:#0b1326;border:1px solid #2b3f63;border-radius:999px;padding:6px 10px;font-size:12px;color:#cfe1f8}
+    .tip{font-size:12px;color:#b7c6d9}
+    .progress{height:8px;background:#0b1326;border:1px solid #2b3f63;border-radius:999px;overflow:hidden}
+    .bar{height:100%;width:0%;background:linear-gradient(90deg,#38bdf8,#22d3ee)}
+    .pick{position:absolute;bottom:10px;right:10px;background:#0b1326;border:1px solid #2b3f63;color:#e6edf3;border-radius:999px;padding:6px 10px;font-size:12px;z-index:1}
+    .log{margin-top:10px;background:#0b1326;border:1px solid #2b3f63;border-radius:12px;padding:8px;max-height:160px;overflow:auto;font-size:12px;color:#cfe1f8}
+    .log .err{color:#ffb4b4}
+    .ribbon{display:flex;align-items:center;gap:10px;background:#0b1326;border:1px solid #2b3f63;border-radius:12px;padding:8px;margin:10px 0}
+    .ribbon b{color:#fff}
+    .tests{margin-top:12px;border:1px dashed #2a3f61;border-radius:12px;padding:10px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>🎬 Générateur Vidéo <em>Avant / Après</em> (v5 — MP4 ou Fallback WEBM)</h1>
+      <div class="ribbon">Mode encodeur : <b id="mode">détection…</b> — MP4 via FFmpeg si disponible, sinon WEBM (navigateur).</div>
+      <p class="muted">Charge tes deux images, choisis le format, puis clique sur <strong>Générer la vidéo</strong>. Le fichier est prêt à publier (Instagram/Facebook/Reels). Si FFmpeg ne peut pas être chargé, on bascule automatiquement sur un enregistrement <em>WEBM</em> via le navigateur.</p>
+      <div class="grid">
+        <div>
+          <div class="drop" id="dropA">
+            <input type="file" id="fileA" accept="image/*" />
+            <span>Dépose <strong>AVANT</strong> ici ou clique pour choisir</span>
+            <label for="fileA" class="pick">Choisir un fichier</label>
+          </div>
+          <div class="drop" id="dropB" style="margin-top:10px">
+            <input type="file" id="fileB" accept="image/*" />
+            <span>Dépose <strong>APRÈS</strong> ici ou clique pour choisir</span>
+            <label for="fileB" class="pick">Choisir un fichier</label>
+          </div>
+
+          <div class="thumbs" style="margin-top:12px">
+            <div class="thumb"><span class="pill">Avant</span><img id="imgA" alt="Avant"/></div>
+            <div class="thumb"><span class="pill">Après</span><img id="imgB" alt="Après"/></div>
+          </div>
+
+          <div id="log" class="log"></div>
+          <div class="btns"><button id="viewA" class="sec" disabled>Prévisualiser AVANT</button><button id="viewB" class="sec" disabled>Prévisualiser APRÈS</button></div>
+
+          <div class="tests">
+            <b>Tests intégrés</b> — pour vérifier l’app sans fichiers :
+            <div class="btns" style="margin-top:8px">
+              <button class="sec" id="loadTest">Charger deux images de test</button>
+              <button class="sec" id="runTest" disabled>Exécuter un rendu test</button>
+            </div>
+            <div class="tip">Les images de test sont de petits dégradés PNG (embarqués). Le rendu doit générer un fichier court.</div>
+          </div>
+        </div>
+        <div class="controls">
+          <label>Ratio / Taille de sortie</label>
+          <select id="preset">
+            <option value="1080x1080">Instagram Carré — 1080×1080 (1:1)</option>
+            <option value="1200x630">Facebook Paysage — 1200×630 (~1.9:1)</option>
+            <option value="1080x1920">Vertical Reels/Stories — 1080×1920 (9:16)</option>
+            <option value="1920x1080">YouTube 1080p — 1920×1080 (16:9)</option>
+            <option value="custom">Personnalisé…</option>
+          </select>
+          <div id="customWH" class="row" style="display:none">
+            <div>
+              <label>Largeur (px)</label>
+              <input type="number" id="cw" value="1080" min="256" max="3840">
+            </div>
+            <div>
+              <label>Hauteur (px)</label>
+              <input type="number" id="ch" value="1080" min="256" max="3840">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Durée totale (s)</label>
+              <input type="number" id="duration" value="6" min="2" max="30">
+            </div>
+            <div>
+              <label>Durée transition (s)</label>
+              <input type="number" id="tdur" value="1.2" min="0.3" max="5" step="0.1">
+            </div>
+          </div>
+
+          <label>Type de transition</label>
+          <select id="transition">
+            <option value="fade">Fondu enchaîné (douce)</option>
+            <option value="wipeleft">Wipe gauche ←</option>
+            <option value="slideright">Slide →</option>
+            <option value="circleopen">Cercle (ouverture)</option>
+          </select>
+
+          <label>Style des libellés</label>
+          <div class="row">
+            <input type="text" id="labelA" value="Avant" />
+            <input type="text" id="labelB" value="Après" />
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Police (CSS)</label>
+              <input type="text" id="fontCSS" value="600 32px system-ui" />
+            </div>
+            <div>
+              <label>Opacité du cartouche (0–1)</label>
+              <input type="number" id="labelBg" value="0.72" min="0" max="1" step="0.02" />
+            </div>
+          </div>
+
+          <label>Format de sortie</label>
+          <select id="format">
+            <option value="auto">Auto (MP4 si possible, sinon WEBM)</option>
+            <option value="mp4">MP4 (H.264 via FFmpeg)</option>
+            <option value="webm">WEBM (VP9/VP8 via navigateur)</option>
+          </select>
+
+          <label>
+            <input type="checkbox" id="exportBoth" /> Exporter automatiquement <em>deux</em> ratios (Carré Instagram + Paysage Facebook)
+          </label>
+
+          <div class="btns">
+            <button id="go" disabled>Générer la vidéo</button>
+            <button id="reset" class="sec">Réinitialiser</button>
+          </div>
+
+          <div id="status" class="tip" style="margin-top:10px">Statut : en attente d'images…</div>
+          <div class="progress" style="margin-top:8px"><div class="bar" id="bar"></div></div>
+
+          <div id="outputs"></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="tip" style="margin-top:14px">💡 Si Instagram refuse le WEBM, sélectionne <b>MP4</b> et assure-toi que FFmpeg se charge (connexion requise). Sinon, exporte en WEBM et convertis via CapCut/HandBrake.</p>
+  </div>
+
+  <script>
+  const q = sel => document.querySelector(sel);
+  const imgA = q('#imgA');
+  const imgB = q('#imgB');
+  const fileA = q('#fileA');
+  const fileB = q('#fileB');
+  const dropA = q('#dropA');
+  const dropB = q('#dropB');
+  const preset = q('#preset');
+  const customWH = q('#customWH');
+  const cw = q('#cw');
+  const ch = q('#ch');
+  const duration = q('#duration');
+  const tdur = q('#tdur');
+  const transition = q('#transition');
+  const labelA = q('#labelA');
+  const labelB = q('#labelB');
+  const fontCSS = q('#fontCSS');
+  const labelBg = q('#labelBg');
+  const exportBoth = q('#exportBoth');
+  const statusEl = q('#status');
+  const bar = q('#bar');
+  const outputs = q('#outputs');
+  const goBtn = q('#go');
+  const logBox = q('#log');
+  const viewA = q('#viewA');
+  const viewB = q('#viewB');
+  const modeSpan = q('#mode');
+  const formatSel = q('#format');
+  const loadTestBtn = q('#loadTest');
+  const runTestBtn = q('#runTest');
+
+  let ffmpeg = null; // FFmpeg instance
+  let ffmpegAvailable = false;
+  let objUrlA=null, objUrlB=null;
+
+  function log(m, err=false){ if(!logBox) return; const d=document.createElement('div'); if(err) d.className='err'; d.textContent='['+new Date().toLocaleTimeString()+'] '+m; logBox.prepend(d); }
+  function setStatus(text, p){ statusEl.textContent = 'Statut : ' + text; if(p!=null) bar.style.width = (p*100).toFixed(0)+'%'; }
+  function updateGoDisabled(){ goBtn.disabled = !(imgA.src && imgB.src); goBtn.style.opacity = goBtn.disabled ? .6 : 1; }
+  function readFileAsURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+
+  imgA.addEventListener('error',()=>{ log("Erreur d'affichage AVANT (format non supporté ?)", true); });
+  imgB.addEventListener('error',()=>{ log("Erreur d'affichage APRÈS (format non supporté ?)", true); });
+
+  function bindDrop(drop,input,img){
+    drop.addEventListener('click',()=>input.click());
+    drop.addEventListener('dragover',e=>{e.preventDefault(); drop.style.background='#0f1a33';});
+    drop.addEventListener('dragleave',()=> drop.style.background='');
+    drop.addEventListener('drop',async e=>{e.preventDefault(); drop.style.background=''; if(e.dataTransfer.files?.[0]) { input.files = e.dataTransfer.files; input.dispatchEvent(new Event('change')); }});
+    input.addEventListener('change', async ()=>{
+      const f=input.files?.[0]; if(!f){updateGoDisabled();return;}
+      if(!/^image\//i.test(f.type)){ log('Fichier refusé (pas une image) : '+(f.name||''), true); return; }
+      const url = await readFileAsURL(f); img.src=url; try{ if(img.decode) await img.decode(); }catch(e){}
+      const sizeKB = (f.size/1024).toFixed(1)+' KB';
+      log('Chargé: '+ (f.name||'(sans nom)') +' — '+sizeKB);
+      if(img===imgA){ if(objUrlA) URL.revokeObjectURL(objUrlA); objUrlA = URL.createObjectURL(f); viewA.disabled=false; }
+      if(img===imgB){ if(objUrlB) URL.revokeObjectURL(objUrlB); objUrlB = URL.createObjectURL(f); viewB.disabled=false; }
+      setStatus('image chargée : '+(f.name||''));
+      updateGoDisabled();
+    });
+  }
+  bindDrop(dropA,fileA,imgA);
+  bindDrop(dropB,fileB,imgB);
+  if(viewA) viewA.addEventListener('click',()=>{ if(objUrlA) window.open(objUrlA,'_blank'); });
+  if(viewB) viewB.addEventListener('click',()=>{ if(objUrlB) window.open(objUrlB,'_blank'); });
+
+  preset.addEventListener('change',()=>{ customWH.style.display = preset.value==='custom' ? 'grid':'none'; });
+  q('#reset').addEventListener('click',()=>{ fileA.value=''; fileB.value=''; imgA.src=''; imgB.src=''; if(objUrlA){URL.revokeObjectURL(objUrlA);objUrlA=null;} if(objUrlB){URL.revokeObjectURL(objUrlB);objUrlB=null;} viewA.disabled=true; viewB.disabled=true; outputs.innerHTML=''; bar.style.width='0%'; setStatus('réinitialisé',0); updateGoDisabled(); log('Réinitialisation'); });
+
+  function drawLabeled(img, W, H, text){
+    const c = document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
+    g.fillStyle = '#0a1224'; g.fillRect(0,0,W,H);
+    const rImg = img.naturalWidth / img.naturalHeight; const rOut = W/H;
+    let dw, dh, dx, dy;
+    if(rImg > rOut){ dh = H; dw = H*rImg; dx = (W-dw)/2; dy=0; }
+    else{ dw = W; dh = W/rImg; dx = 0; dy=(H-dh)/2; }
+    g.drawImage(img, dx, dy, dw, dh);
+    if(text && text.trim()){
+      g.save(); g.font = fontCSS.value || '600 32px system-ui';
+      const padX=16; const m = g.measureText(text);
+      const boxW = Math.ceil(m.width)+padX*2; const boxH = Math.ceil(parseInt(g.font))*1.3 + 8;
+      g.globalAlpha = Math.max(0, Math.min(1, parseFloat(labelBg.value)||0.72));
+      g.fillStyle = '#0b1326';
+      roundRect(g, 12, 12, boxW, boxH, 12, true, false);
+      g.globalAlpha = 1; g.fillStyle = '#e6edf3';
+      g.fillText(text, 12+padX, 12+boxH - 14);
+      g.restore();
+    }
+    return c;
+  }
+  function roundRect(ctx, x, y, w, h, r, fill, stroke){
+    ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); if(fill) ctx.fill(); if(stroke) ctx.stroke();
+  }
+
+  function getWH(){ if(preset.value==='custom') return [parseInt(cw.value||1080), parseInt(ch.value||1080)]; return preset.value.split('x').map(v=>parseInt(v)); }
+  function xfadeName(sel){ const map = { fade:'fade', wipeleft:'wipeleft', slideright:'slideright', circleopen:'circleopen' }; return map[sel] || 'fade'; }
+
+  // ---- FFmpeg robust loader (multi-stratégie) ----
+  async function tryLoadFFmpeg(){
+    // 1) Déjà présent ?
+    if(window.FFmpeg && window.FFmpeg.createFFmpeg){
+      return window.FFmpeg.createFFmpeg({ log:true, corePath:'https://unpkg.com/@ffmpeg/core@0.12.7/dist/ffmpeg-core.js' });
+    }
+    // 2) Import ESM via jsDelivr
+    try{
+      const mod = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/+esm');
+      if(mod && mod.createFFmpeg) return mod.createFFmpeg({ log:true, corePath:'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.7/dist/ffmpeg-core.js' });
+    }catch(e){ log('Import ESM FFmpeg échoué (CDN/jsDelivr).'); }
+    // 3) Injecter script unpkg, attendre global
+    try{
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script'); s.src='https://unpkg.com/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js'; s.async=true; s.onload=()=>res(); s.onerror=()=>rej(new Error('unpkg load error')); document.head.appendChild(s);
+      });
+      if(window.FFmpeg && window.FFmpeg.createFFmpeg){
+        return window.FFmpeg.createFFmpeg({ log:true, corePath:'https://unpkg.com/@ffmpeg/core@0.12.7/dist/ffmpeg-core.js' });
+      }
+    }catch(e){ log('Chargement script FFmpeg (unpkg) échoué.'); }
+    return null; // échec
+  }
+
+  async function ensureFF(){
+    if(ffmpegAvailable) return;
+    setStatus('détection de FFmpeg…',0.05); log('Détection/chargement FFmpeg…');
+    ffmpeg = await tryLoadFFmpeg();
+    if(!ffmpeg){ ffmpegAvailable=false; modeSpan.textContent = 'Fallback WEBM (FFmpeg indisponible)'; log('FFmpeg indisponible → fallback WEBM'); return; }
+    try{ await ffmpeg.load(); ffmpegAvailable=true; modeSpan.textContent = 'MP4 (FFmpeg prêt)'; log('FFmpeg prêt'); }
+    catch(err){ ffmpegAvailable=false; modeSpan.textContent = 'Fallback WEBM (chargement FFmpeg échoué)'; log('FFmpeg échec: '+err.message,true); }
+  }
+
+  // ---- Fallback enregistrement WEBM via MediaRecorder ----
+  async function renderWithMediaRecorder(canvas, seconds, fps){
+    const stream = canvas.captureStream(fps);
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm;codecs=vp8';
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 });
+    const chunks=[]; rec.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    const done = new Promise(res=>{ rec.onstop=()=>res(new Blob(chunks,{type:mime})); });
+    rec.start();
+    await new Promise(r=>setTimeout(r, seconds*1000 + 120));
+    rec.stop();
+    const blob = await done; return blob;
+  }
+
+  // ---- Pipeline de rendu commun (crée timeline et frames) ----
+  function makeTimeline(W,H){
+    const cA = drawLabeled(imgA, W, H, labelA.value);
+    const cB = drawLabeled(imgB, W, H, labelB.value);
+    return { cA, cB };
+  }
+
+  async function renderFallbackWEBM(W,H, baseName){
+    const fps = 30; const dur = Math.max(2, parseFloat(duration.value)||6); const t = Math.max(0.3, Math.min(dur-0.2, parseFloat(tdur.value)||1.2));
+    const { cA, cB } = makeTimeline(W,H);
+    const canvas = document.createElement('canvas'); canvas.width=W; canvas.height=H; const g=canvas.getContext('2d');
+    const totalFrames = Math.floor(dur*fps);
+    const transFrames = Math.floor(t*fps);
+    const startTrans = totalFrames - transFrames;
+    const T = xfadeName(transition.value);
+
+    const draw = (idx)=>{
+      // Avant phase
+      if(idx < startTrans){
+        g.drawImage(cA,0,0); return;
+      }
+      // Transition
+      const k = (idx - startTrans) / Math.max(1, transFrames-1); // 0→1
+      if(T==='fade'){
+        g.drawImage(cA,0,0);
+        g.globalAlpha = k; g.drawImage(cB,0,0); g.globalAlpha=1;
+      }else if(T==='slideright'){
+        const off = Math.round(k*W);
+        g.drawImage(cA, off- W, 0); // A sort à gauche → droite
+        g.drawImage(cB, off, 0);
+      }else if(T==='wipeleft'){
+        g.drawImage(cB,0,0); // B dessous
+        g.save(); g.beginPath(); g.rect(W*(1-k),0,W, H); g.clip(); g.drawImage(cA,0,0); g.restore();
+      }else if(T==='circleopen'){
+        g.drawImage(cA,0,0);
+        g.save(); g.beginPath(); g.arc(W/2,H/2, Math.sqrt(W*W+H*H)*k, 0, Math.PI*2); g.clip(); g.drawImage(cB,0,0); g.restore();
+      }else{
+        g.drawImage(cA,0,0);
+        g.globalAlpha = k; g.drawImage(cB,0,0); g.globalAlpha=1;
+      }
+    };
+
+    const fpsDelay = 1000/fps;
+    let f=0; setStatus('rendu WEBM…',0.2);
+    await new Promise(async (resolve)=>{
+      const interval = setInterval(()=>{
+        draw(f);
+        f++;
+        bar.style.width = Math.min(95, Math.round(20 + (f/totalFrames)*70)) + '%';
+        if(f>=totalFrames){ clearInterval(interval); resolve(); }
+      }, fpsDelay);
+    });
+
+    const blob = await renderWithMediaRecorder(canvas, dur, fps);
+    const url = URL.createObjectURL(blob);
+    const box = document.createElement('div'); box.className='out';
+    const left = document.createElement('div'); left.innerHTML = `<span class="badge">${W}×${H}</span> <span class="badge">WEBM</span> <span class="badge">${dur}s</span>`;
+    const a = document.createElement('a'); a.href=url; a.download = `${baseName}.webm`; a.textContent = 'Télécharger la vidéo (WEBM)';
+    const prev = document.createElement('video'); prev.src=url; prev.controls=true; prev.muted=true; prev.playsInline=true; prev.style.maxWidth='220px'; prev.style.borderRadius='12px';
+    box.appendChild(left); box.appendChild(a); box.appendChild(prev); outputs.appendChild(box);
+    setStatus('terminé (WEBM) : '+baseName+`.webm`,1);
+  }
+
+  async function renderMP4WithFFmpeg(W,H, baseName){
+    const { cA, cB } = makeTimeline(W,H);
+    // Convert canva → PNG bytes
+    async function canvasToU8(c){ const blob = await new Promise(res=> c.toBlob(res,'image/png')); const buf = await blob.arrayBuffer(); return new Uint8Array(buf); }
+    const aU8 = await canvasToU8(cA); const bU8 = await canvasToU8(cB);
+    ffmpeg.FS('writeFile','before.png', aU8); ffmpeg.FS('writeFile','after.png', bU8);
+    const dur = Math.max(2, parseFloat(duration.value)||6);
+    const t = Math.max(0.3, Math.min(dur-0.2, parseFloat(tdur.value)||1.2));
+    const offset = (dur - t).toFixed(3); const T = xfadeName(transition.value);
+
+    const args = [
+      '-r','30', '-loop','1','-t', String(dur), '-i','before.png',
+      '-r','30', '-loop','1','-t', String(dur), '-i','after.png',
+      '-filter_complex',
+        `[0:v]scale=${W}:${H},setsar=1[v0];`+
+        `[1:v]scale=${W}:${H},setsar=1[v1];`+
+        `[v0][v1]xfade=transition=${T}:duration=${t}:offset=${offset},format=yuv420p[v]`,
+      '-map','[v]', '-c:v','libx264','-preset','veryfast','-crf','23','-pix_fmt','yuv420p','-movflags','+faststart',
+      baseName+`.mp4`
+    ];
+
+    setStatus('rendu MP4 (FFmpeg)…',0.35); log('Rendu MP4 '+W+'x'+H+'…');
+    await ffmpeg.run(...args);
+    const out = ffmpeg.FS('readFile', baseName+`.mp4`);
+    const blob = new Blob([out.buffer], {type:'video/mp4'});
+    const url = URL.createObjectURL(blob);
+    const box = document.createElement('div'); box.className='out';
+    const left = document.createElement('div'); left.innerHTML = `<span class="badge">${W}×${H}</span> <span class="badge">MP4</span> <span class="badge">${dur}s</span>`;
+    const a = document.createElement('a'); a.href=url; a.download = `${baseName}.mp4`; a.textContent = 'Télécharger la vidéo (MP4)';
+    const prev = document.createElement('video'); prev.src=url; prev.controls=true; prev.muted=true; prev.playsInline=true; prev.style.maxWidth='220px'; prev.style.borderRadius='12px';
+    box.appendChild(left); box.appendChild(a); box.appendChild(prev); outputs.appendChild(box);
+    setStatus('terminé (MP4) : '+baseName+`.mp4`,1);
+  }
+
+  async function makeOneVideoAuto(W,H, baseName){
+    const desired = formatSel.value; await ensureFF();
+    if(desired==='mp4' && !ffmpegAvailable){ throw new Error('MP4 demandé mais FFmpeg indisponible. Passe en "Auto" ou "WEBM".'); }
+    if( (desired==='mp4') || (desired==='auto' && ffmpegAvailable) ){
+      await renderMP4WithFFmpeg(W,H, baseName);
+    }else{
+      await renderFallbackWEBM(W,H, baseName);
+    }
+  }
+
+  q('#go').addEventListener('click', async ()=>{
+    outputs.innerHTML=''; bar.style.width='0%';
+    if(!(imgA.src && imgB.src)){ alert('Ajoute les deux images AVANT et APRÈS.'); return; }
+    try{
+      goBtn.disabled = true; goBtn.textContent='Génération…';
+      const [W,H] = getWH();
+      await makeOneVideoAuto(W,H, `avant_apres_${W}x${H}`);
+      if(exportBoth.checked){ for(const [w,h] of [[1080,1080],[1200,630]]){ await makeOneVideoAuto(w,h, `avant_apres_${w}x${h}`); } }
+    }catch(err){ console.error(err); log('Erreur: '+err.message, true); alert('Erreur : '+err.message); setStatus('erreur — vois la console du navigateur'); }
+    finally{ goBtn.disabled=false; goBtn.textContent='Générer la vidéo'; }
+  });
+
+  // ---- Tests intégrés ----
+  const TEST_A = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAABkCAYAAABjv0F8AAAACXBIWXMAAAsSAAALEgHS3X78AAABU0lEQVR4nO3VMQ6CMBSF4X8gQf//mWm0Q5zFhJwqfLFmL2yq7b3g0m0pHn1uXc7JmQkQXo+4jvZgH3l2J3c4w6m7RrG4RkYxq8eNqfQJ8n1f3rO9b0N9U7oX0g3m8hZf9h8JZr8k1g1q3sYJ8r7hUe0bq3mVg9f3Yg3kVg3g4s4s3m1H6Nw2mR9o4K7v4HkQ8YF3o4g7b0w2Y9o0k6Xf8kW7f8gY8HkT8cG3oYg7T0w2Y9o0k6Xf8kW7f8gY8HkT8cG3oYg7T0w2Y9o0k6Xf8kW7f8gY8HkT8cG3oYg7T0w2Y9o0k6Xf8kW7f8gY8HkT8cG3oYg7T0w2Y9o0k6Xd8g1e7zZ7cKq2m7gH0b4JQ8v7o3n6m9K7w2wZ7o3yD1m3wqf1r1AAAAAElFTkSuQmCC';
+  const TEST_B = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAABkCAYAAABjv0F8AAAACXBIWXMAAAsSAAALEgHS3X78AAABYUlEQVR4nO3WsQ3CMBQF0YdB//9xC2rK0h2xJkg2cJtH1U3o1k1yVt9v9k2gNQ0Kp9yKxw+2Q2kq4O7yN1g2d+H2M1wqfZk3wYl1e3A5mT0mYw3mN1tP2q8w6s7q8o7cYq9o6Vf4mRGsP5vfP0l8b4r6vZ6D3v7E0w3a+Q2m9o6mVg4+7Yg3kXg3k3k3m0H6Nw2mR9o4K7v4HkQ8YF3o4g7b0w2Y9o0k6Xf8kW7f8gY8HkT8cG3oYg7T0w2Y9o0k6Xf8kW7f8gY8HkT8cG3oYg7T0w2Y9o0k6Xf8kW7f8gY8HkT8cG3oYg7T0w2Y9o0k6Xf8kW7f8gY8HkT8cG3oYg7T0w2Y9o0k6Xe8gq8b4o7j1rj2AAAAAElFTkSuQmCC';
+
+  async function loadTests(){ imgA.src=TEST_A; imgB.src=TEST_B; try{ if(imgA.decode) await imgA.decode(); if(imgB.decode) await imgB.decode(); }catch(e){}; updateGoDisabled(); runTestBtn.disabled=false; log('Images de test chargées'); }
+  async function runTests(){ outputs.innerHTML=''; bar.style.width='0%'; log('Test: rendu 640x360 3s fade WEBM/MP4 auto'); const oldPreset=preset.value, oldDur=duration.value, oldT=tdur.value, oldTrans=transition.value; preset.value='1920x1080'; duration.value=3; tdur.value=1; transition.value='fade'; try{ await makeOneVideoAuto(640,360,'test_640x360'); } catch(e){ log('Échec test: '+e.message,true); } finally{ preset.value=oldPreset; duration.value=oldDur; tdur.value=oldT; transition.value=oldTrans; }
+  }
+  loadTestBtn.addEventListener('click', loadTests);
+  runTestBtn.addEventListener('click', runTests);
+
+  // Première détection (asynchrone mais non bloquante)
+  ensureFF();
+  modeSpan.textContent = 'détection en cours…';
+
+  </script>
+</body>
+</html>
