@@ -10,12 +10,16 @@
     .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
     .card{background:var(--panel);border-radius:var(--radius);box-shadow:0 10px 30px rgba(0,0,0,.25);padding:18px}
     h1{font-size:clamp(20px,2.8vw,30px);margin:0 0 8px}
+    h2{font-size:clamp(18px,2.2vw,24px);margin:18px 0 8px}
+    h3{font-size:clamp(16px,2vw,20px);margin:16px 0 8px}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     .muted{color:var(--muted)}
     .grid{display:grid;gap:14px}
     @media(min-width:980px){.grid{grid-template-columns:1.2fr .8fr}}
     .drop{border:2px dashed #274063;border-radius:16px;padding:14px;display:flex;gap:12px;align-items:center;justify-content:center;min-height:120px;cursor:pointer;background:#0e172b; position:relative}
     .drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2}
     .drop:hover{background:#0f1a33}
+    .drop:focus-within{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(56,189,248,.35)}
     .thumbs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .thumb{background:#0c1222;border:1px solid #22344f;border-radius:14px;overflow:hidden;position:relative;aspect-ratio:1.6/1}
     .thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -38,25 +42,28 @@
     .ribbon{display:flex;align-items:center;gap:10px;background:#0b1326;border:1px solid #2b3f63;border-radius:12px;padding:8px;margin:10px 0}
     .ribbon b{color:#fff}
     .tests{margin-top:12px;border:1px dashed #2a3f61;border-radius:12px;padding:10px}
+    button:focus-visible,select:focus-visible,input[type="number"]:focus-visible,input[type="text"]:focus-visible,input[type="checkbox"]:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
+    .pick:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
+    <main class="card">
       <h1>🎬 Générateur Vidéo <em>Avant / Après</em> (v5 — MP4 ou Fallback WEBM)</h1>
       <div class="ribbon">Mode encodeur : <b id="mode">détection…</b> — MP4 via FFmpeg si disponible, sinon WEBM (navigateur).</div>
       <p class="muted">Charge tes deux images, choisis le format, puis clique sur <strong>Générer la vidéo</strong>. Le fichier est prêt à publier (Instagram/Facebook/Reels). Si FFmpeg ne peut pas être chargé, on bascule automatiquement sur un enregistrement <em>WEBM</em> via le navigateur.</p>
       <div class="grid">
-        <div>
+        <section aria-labelledby="upload-title">
+          <h2 id="upload-title">Importer les images sources</h2>
           <div class="drop" id="dropA">
-            <input type="file" id="fileA" accept="image/*" />
-            <span>Dépose <strong>AVANT</strong> ici ou clique pour choisir</span>
-            <label for="fileA" class="pick">Choisir un fichier</label>
+            <input type="file" id="fileA" accept="image/*" aria-labelledby="dropA-label dropA-button" />
+            <span id="dropA-label">Dépose <strong>AVANT</strong> ici ou clique pour choisir</span>
+            <label for="fileA" class="pick" id="dropA-button">Choisir un fichier</label>
           </div>
           <div class="drop" id="dropB" style="margin-top:10px">
-            <input type="file" id="fileB" accept="image/*" />
-            <span>Dépose <strong>APRÈS</strong> ici ou clique pour choisir</span>
-            <label for="fileB" class="pick">Choisir un fichier</label>
+            <input type="file" id="fileB" accept="image/*" aria-labelledby="dropB-label dropB-button" />
+            <span id="dropB-label">Dépose <strong>APRÈS</strong> ici ou clique pour choisir</span>
+            <label for="fileB" class="pick" id="dropB-button">Choisir un fichier</label>
           </div>
 
           <div class="thumbs" style="margin-top:12px">
@@ -64,20 +71,22 @@
             <div class="thumb"><span class="pill">Après</span><img id="imgB" alt="Après"/></div>
           </div>
 
-          <div id="log" class="log"></div>
+          <div id="log" class="log" role="log" aria-live="polite"></div>
           <div class="btns"><button id="viewA" class="sec" disabled>Prévisualiser AVANT</button><button id="viewB" class="sec" disabled>Prévisualiser APRÈS</button></div>
 
-          <div class="tests">
-            <b>Tests intégrés</b> — pour vérifier l’app sans fichiers :
+          <section class="tests" aria-labelledby="tests-title" aria-describedby="tests-desc">
+            <h3 id="tests-title">Tests intégrés</h3>
+            <p class="sr-only" id="tests-desc">Lance une simulation avec deux dégradés de démonstration sans fournir d’images.</p>
             <div class="btns" style="margin-top:8px">
               <button class="sec" id="loadTest">Charger deux images de test</button>
               <button class="sec" id="runTest" disabled>Exécuter un rendu test</button>
             </div>
             <div class="tip">Les images de test sont de petits dégradés PNG (embarqués). Le rendu doit générer un fichier court.</div>
-          </div>
-        </div>
-        <div class="controls">
-          <label>Ratio / Taille de sortie</label>
+          </section>
+        </section>
+        <section class="controls" aria-labelledby="settings-title">
+          <h2 id="settings-title">Paramètres de rendu</h2>
+          <label for="preset">Ratio / Taille de sortie</label>
           <select id="preset">
             <option value="1080x1080">Instagram Carré — 1080×1080 (1:1)</option>
             <option value="1200x630">Facebook Paysage — 1200×630 (~1.9:1)</option>
@@ -87,27 +96,27 @@
           </select>
           <div id="customWH" class="row" style="display:none">
             <div>
-              <label>Largeur (px)</label>
+              <label for="cw">Largeur (px)</label>
               <input type="number" id="cw" value="1080" min="256" max="3840">
             </div>
             <div>
-              <label>Hauteur (px)</label>
+              <label for="ch">Hauteur (px)</label>
               <input type="number" id="ch" value="1080" min="256" max="3840">
             </div>
           </div>
 
           <div class="row">
             <div>
-              <label>Durée totale (s)</label>
+              <label for="duration">Durée totale (s)</label>
               <input type="number" id="duration" value="6" min="2" max="30">
             </div>
             <div>
-              <label>Durée transition (s)</label>
+              <label for="tdur">Durée transition (s)</label>
               <input type="number" id="tdur" value="1.2" min="0.3" max="5" step="0.1">
             </div>
           </div>
 
-          <label>Type de transition</label>
+          <label for="transition">Type de transition</label>
           <select id="transition">
             <option value="fade">Fondu enchaîné (douce)</option>
             <option value="wipeleft">Wipe gauche ←</option>
@@ -115,24 +124,30 @@
             <option value="circleopen">Cercle (ouverture)</option>
           </select>
 
-          <label>Style des libellés</label>
+          <h3>Style des libellés</h3>
           <div class="row">
-            <input type="text" id="labelA" value="Avant" />
-            <input type="text" id="labelB" value="Après" />
+            <div>
+              <label for="labelA">Texte « Avant »</label>
+              <input type="text" id="labelA" value="Avant" />
+            </div>
+            <div>
+              <label for="labelB">Texte « Après »</label>
+              <input type="text" id="labelB" value="Après" />
+            </div>
           </div>
 
           <div class="row">
             <div>
-              <label>Police (CSS)</label>
+              <label for="fontCSS">Police (CSS)</label>
               <input type="text" id="fontCSS" value="600 32px system-ui" />
             </div>
             <div>
-              <label>Opacité du cartouche (0–1)</label>
+              <label for="labelBg">Opacité du cartouche (0–1)</label>
               <input type="number" id="labelBg" value="0.72" min="0" max="1" step="0.02" />
             </div>
           </div>
 
-          <label>Format de sortie</label>
+          <label for="format">Format de sortie</label>
           <select id="format">
             <option value="auto">Auto (MP4 si possible, sinon WEBM)</option>
             <option value="mp4">MP4 (H.264 via FFmpeg)</option>
@@ -148,13 +163,13 @@
             <button id="reset" class="sec">Réinitialiser</button>
           </div>
 
-          <div id="status" class="tip" style="margin-top:10px">Statut : en attente d'images…</div>
+          <div id="status" class="tip" style="margin-top:10px" role="status" aria-live="polite">Statut : en attente d'images…</div>
           <div class="progress" style="margin-top:8px"><div class="bar" id="bar"></div></div>
 
           <div id="outputs"></div>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
 
     <p class="tip" style="margin-top:14px">💡 Si Instagram refuse le WEBM, sélectionne <b>MP4</b> et assure-toi que FFmpeg se charge (connexion requise). Sinon, exporte en WEBM et convertis via CapCut/HandBrake.</p>
   </div>
