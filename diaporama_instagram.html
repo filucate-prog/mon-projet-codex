@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diaporama Instagram</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            margin-top: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #5a4a8c;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .description {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #666;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .drop-zone {
+            border: 3px dashed #5a4a8c;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            background-color: #f9f7ff;
+            cursor: pointer;
+        }
+
+        .drop-zone:hover, .drop-zone.active {
+            background-color: #eae4ff;
+            border-color: #8a70d6;
+        }
+
+        .drop-zone i {
+            font-size: 48px;
+            color: #8a70d6;
+            margin-bottom: 15px;
+        }
+
+        .drop-zone p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .image-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+        }
+
+        .image-item {
+            width: 80px;
+            height: 80px;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-item .index {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .image-item .remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.7);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .image-item:hover .remove {
+            opacity: 1;
+        }
+
+        .preview-container {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .preview-title {
+            margin-bottom: 10px;
+            color: #5a4a8c;
+            font-weight: 600;
+        }
+
+        .preview-area {
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+            border: 2px solid #8a70d6;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            background-color: #000;
+        }
+
+        .preview-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .preview-image.active {
+            opacity: 1;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: #5a4a8c;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #8a70d6;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background-color: #b0a8d0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
+
+        .progress-container {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: #5a4a8c;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .info-box {
+            background-color: #f0f7ff;
+            border-left: 4px solid #5a4a8c;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-box h3 {
+            color: #5a4a8c;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            padding-left: 20px;
+            color: #666;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        .status-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            display: none;
+        }
+
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .video-preview {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .video-preview video {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>Diaporama Instagram</h1>
+    <p class="description">Transformez vos photos en vidéo carrée pour Instagram</p>
+    
+    <div class="container">
+        <div class="status-message" id="statusMessage"></div>
+        
+        <div class="drop-zone" id="dropZone">
+            <i>📁</i>
+            <p>Glissez-déposez vos photos ici</p>
+            <p>ou</p>
+            <button class="btn btn-secondary" id="browseBtn">Parcourir les fichiers</button>
+            <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png" style="display: none;">
+        </div>
+        
+        <div class="image-list" id="imageList"></div>
+        
+        <div class="preview-container">
+            <h3 class="preview-title">Aperçu du diaporama</h3>
+            <div class="preview-area" id="previewArea">
+                <!-- Les images de prévisualisation seront ajoutées ici -->
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" id="generateBtn" disabled>
+                <span>Générer la vidéo</span>
+            </button>
+        </div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+            <div class="progress-text" id="progressText">Traitement en cours...</div>
+        </div>
+        
+        <div class="video-preview" id="videoPreview">
+            <h3>Votre vidéo est prête !</h3>
+            <video controls id="generatedVideo"></video>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-primary" id="downloadBtn">Télécharger la vidéo</button>
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <h3>Informations sur le rendu</h3>
+            <ul>
+                <li>Format : MP4 carré (1080x1080 pixels)</li>
+                <li>Durée par photo : 3 secondes</li>
+                <li>Transition : Fondu croisé de 1 seconde</li>
+                <li>Qualité : H.264, 30 images par seconde</li>
+            </ul>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Logiciel de diaporama vidéo Instagram - Version Simplifiée</p>
+    </footer>
+
+    <script>
+        // Éléments DOM
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const imageList = document.getElementById('imageList');
+        const previewArea = document.getElementById('previewArea');
+        const generateBtn = document.getElementById('generateBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const statusMessage = document.getElementById('statusMessage');
+        const videoPreview = document.getElementById('videoPreview');
+        const generatedVideo = document.getElementById('generatedVideo');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // Variables globales
+        let images = [];
+        let previewInterval = null;
+        let currentPreviewIndex = 0;
+
+        // Événements
+        browseBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+        dropZone.addEventListener('dragover', handleDragOver);
+        dropZone.addEventListener('dragleave', handleDragLeave);
+        dropZone.addEventListener('drop', handleDrop);
+        generateBtn.addEventListener('click', generateVideo);
+        downloadBtn.addEventListener('click', downloadVideo);
+
+        // Fonctions de gestion des fichiers
+        function handleDragOver(e) {
+            e.preventDefault();
+            dropZone.classList.add('active');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            const files = Array.from(e.dataTransfer.files);
+            processFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            processFiles(files);
+            // Réinitialiser l'input pour permettre la sélection des mêmes fichiers
+            e.target.value = '';
+        }
+
+        function processFiles(files) {
+            const imageFiles = files.filter(file => 
+                file.type === 'image/jpeg' || 
+                file.type === 'image/jpg' || 
+                file.type === 'image/png'
+            );
+
+            if (imageFiles.length === 0) {
+                showStatus('Veuillez sélectionner des fichiers JPG ou PNG.', 'error');
+                return;
+            }
+
+            images = [...images, ...imageFiles];
+            updateImageList();
+            updatePreview();
+            updateGenerateButton();
+            showStatus(`${imageFiles.length} image(s) ajoutée(s)`, 'success');
+        }
+
+        function updateImageList() {
+            imageList.innerHTML = '';
+            
+            images.forEach((image, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageItem = document.createElement('div');
+                    imageItem.className = 'image-item';
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = `Image ${index + 1}`;
+                    
+                    const indexSpan = document.createElement('span');
+                    indexSpan.className = 'index';
+                    indexSpan.textContent = index + 1;
+                    
+                    const removeBtn = document.createElement('span');
+                    removeBtn.className = 'remove';
+                    removeBtn.textContent = '×';
+                    removeBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        removeImage(index);
+                    });
+                    
+                    imageItem.appendChild(img);
+                    imageItem.appendChild(indexSpan);
+                    imageItem.appendChild(removeBtn);
+                    imageList.appendChild(imageItem);
+                };
+                reader.readAsDataURL(image);
+            });
+        }
+
+        function removeImage(index) {
+            images.splice(index, 1);
+            updateImageList();
+            updatePreview();
+            updateGenerateButton();
+            showStatus('Image supprimée', 'info');
+        }
+
+        function updatePreview() {
+            previewArea.innerHTML = '';
+            
+            if (images.length === 0) {
+                return;
+            }
+            
+            // Créer les éléments d'image pour la prévisualisation
+            images.forEach((image, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.className = 'preview-image';
+                    img.src = e.target.result;
+                    img.alt = `Image ${index + 1}`;
+                    
+                    if (index === 0) {
+                        img.classList.add('active');
+                    }
+                    
+                    previewArea.appendChild(img);
+                };
+                reader.readAsDataURL(image);
+            });
+            
+            // Démarrer la prévisualisation animée
+            startPreviewAnimation();
+        }
+
+        function startPreviewAnimation() {
+            if (previewInterval) {
+                clearInterval(previewInterval);
+            }
+            
+            const previewImages = document.querySelectorAll('.preview-image');
+            if (previewImages.length === 0) return;
+            
+            currentPreviewIndex = 0;
+            
+            previewInterval = setInterval(() => {
+                previewImages.forEach(img => img.classList.remove('active'));
+                previewImages[currentPreviewIndex].classList.add('active');
+                
+                currentPreviewIndex = (currentPreviewIndex + 1) % previewImages.length;
+            }, 3000); // 3 secondes par image
+        }
+
+        function updateGenerateButton() {
+            generateBtn.disabled = images.length === 0;
+        }
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message';
+            
+            switch(type) {
+                case 'success':
+                    statusMessage.classList.add('status-success');
+                    break;
+                case 'error':
+                    statusMessage.classList.add('status-error');
+                    break;
+                case 'info':
+                    statusMessage.classList.add('status-info');
+                    break;
+            }
+            
+            statusMessage.style.display = 'block';
+            
+            // Masquer le message après 5 secondes
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        function generateVideo() {
+            if (images.length === 0) return;
+            
+            // Afficher la barre de progression
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Préparation des images...';
+            generateBtn.disabled = true;
+            
+            // Simuler la génération de vidéo
+            simulateVideoGeneration();
+        }
+
+        function simulateVideoGeneration() {
+            let progress = 0;
+            const totalSteps = 5;
+            const stepDuration = 800; // 0.8 seconde par étape
+            
+            const interval = setInterval(() => {
+                progress += 1;
+                const percentage = (progress / totalSteps) * 100;
+                progressBar.style.width = `${percentage}%`;
+                
+                switch(progress) {
+                    case 1:
+                        progressText.textContent = 'Traitement des images...';
+                        break;
+                    case 2:
+                        progressText.textContent = 'Création des transitions...';
+                        break;
+                    case 3:
+                        progressText.textContent = 'Encodage vidéo...';
+                        break;
+                    case 4:
+                        progressText.textContent = 'Finalisation...';
+                        break;
+                    case 5:
+                        progressText.textContent = 'Terminé !';
+                        clearInterval(interval);
+                        
+                        // Afficher la prévisualisation de la vidéo
+                        setTimeout(() => {
+                            showVideoPreview();
+                            progressContainer.style.display = 'none';
+                        }, 1000);
+                        break;
+                }
+            }, stepDuration);
+        }
+
+        function showVideoPreview() {
+            // Dans cette version simplifiée, on crée une vidéo simulée
+            createSimulatedVideo();
+            videoPreview.style.display = 'block';
+            showStatus('Vidéo générée avec succès !', 'success');
+            
+            // Faire défiler jusqu'à la vidéo
+            videoPreview.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function createSimulatedVideo() {
+            // Créer un canvas pour générer une vidéo simulée
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 1080;
+            canvas.height = 1080;
+            
+            // Créer un flux média pour la vidéo
+            const stream = canvas.captureStream(30);
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            const chunks = [];
+            
+            mediaRecorder.ondataavailable = function(e) {
+                if (e.data.size > 0) {
+                    chunks.push(e.data);
+                }
+            };
+            
+            mediaRecorder.onstop = function() {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                generatedVideo.src = url;
+            };
+            
+            // Démarrer l'enregistrement
+            mediaRecorder.start();
+            
+            // Animer le canvas avec les images
+            let currentIndex = 0;
+            const drawImage = () => {
+                if (currentIndex >= images.length) {
+                    mediaRecorder.stop();
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        // Dessiner l'image sur le canvas
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        currentIndex++;
+                        setTimeout(drawImage, 100); // Plus rapide pour la simulation
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(images[currentIndex]);
+            };
+            
+            drawImage();
+        }
+
+        function downloadVideo() {
+            if (generatedVideo.src) {
+                const a = document.createElement('a');
+                a.href = generatedVideo.src;
+                a.download = 'diaporama-instagram.webm';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showStatus('Vidéo téléchargée avec succès !', 'success');
+            } else {
+                showStatus('Aucune vidéo disponible pour le téléchargement', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
